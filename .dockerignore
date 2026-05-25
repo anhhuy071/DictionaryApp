@@ -8,6 +8,7 @@ __pycache__/
 .pytest_cache/
 .vscode/
 .cursor/
-flask_session/
+data/*.db
+dictionary.db
 *.md
 .gitattributes

@@ -3,17 +3,13 @@ Import English → Vietnamese vocabulary from minhqnd/dictionary SQLite database
 
 Data source: https://github.com/minhqnd/dictionary/releases
 License: CC BY-SA 4.0 — attribution required (see README).
-
-Usage:
-  set DATABASE_URL=postgresql://...
-  python import_minhqnd.py
-  python import_minhqnd.py --db data/dictionary.db --limit 1000
 """
 
 import argparse
 import os
 import sqlite3
 import sys
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -23,7 +19,67 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 load_dotenv()
 
 DEFAULT_DB_PATH = Path("data/dictionary.db")
-BATCH_SIZE = 500
+BATCH_SIZE = 1000
+
+FETCH_QUERY = """
+    SELECT
+        w.word,
+        (
+            SELECT GROUP_CONCAT(DISTINCT p.ipa)
+            FROM pronunciations p
+            WHERE p.word_id = w.id AND p.ipa IS NOT NULL AND p.ipa != ''
+        ) AS ipa,
+        COALESCE(
+            (
+                SELECT GROUP_CONCAT(DISTINCT t.translation)
+                FROM translations t
+                WHERE t.word_id = w.id AND t.lang_code = 'vi'
+                  AND t.translation IS NOT NULL AND t.translation != ''
+            ),
+            (
+                SELECT GROUP_CONCAT(DISTINCT d.definition)
+                FROM word_definitions wd
+                JOIN definitions d ON d.id = wd.definition_id
+                WHERE wd.word_id = w.id
+                  AND COALESCE(d.definition_lang, 'vi') = 'vi'
+                  AND d.definition IS NOT NULL AND d.definition != ''
+            )
+        ) AS meaning,
+        (
+            SELECT GROUP_CONCAT(DISTINCT
+                TRIM(COALESCE(d.pos, '') || CASE WHEN d.sub_pos IS NOT NULL THEN ' (' || d.sub_pos || ')' ELSE '' END)
+            )
+            FROM word_definitions wd
+            JOIN definitions d ON d.id = wd.definition_id
+            WHERE wd.word_id = w.id
+              AND (d.pos IS NOT NULL OR d.sub_pos IS NOT NULL)
+        ) AS pos_tags,
+        (
+            SELECT wd.example
+            FROM word_definitions wd
+            WHERE wd.word_id = w.id
+              AND wd.example IS NOT NULL AND wd.example != ''
+            LIMIT 1
+        ) AS example
+    FROM words w
+    WHERE w.lang_code = 'en'
+      AND w.word IS NOT NULL AND w.word != ''
+      AND (
+          EXISTS (
+              SELECT 1 FROM translations t
+              WHERE t.word_id = w.id AND t.lang_code = 'vi'
+                AND t.translation IS NOT NULL AND t.translation != ''
+          )
+          OR EXISTS (
+              SELECT 1 FROM word_definitions wd
+              JOIN definitions d ON d.id = wd.definition_id
+              WHERE wd.word_id = w.id
+                AND COALESCE(d.definition_lang, 'vi') = 'vi'
+                AND d.definition IS NOT NULL AND d.definition != ''
+          )
+      )
+    ORDER BY w.word
+"""
 
 
 def get_sqlite_connection(db_path: Path) -> sqlite3.Connection:
@@ -38,121 +94,80 @@ def get_sqlite_connection(db_path: Path) -> sqlite3.Connection:
     return conn
 
 
-def fetch_english_entries(conn: sqlite3.Connection, limit: int | None = None) -> list[dict]:
-    query = """
-        SELECT
-            w.id,
-            w.word,
-            (
-                SELECT GROUP_CONCAT(DISTINCT p.ipa)
-                FROM pronunciations p
-                WHERE p.word_id = w.id AND p.ipa IS NOT NULL AND p.ipa != ''
-            ) AS ipa,
-            (
-                SELECT GROUP_CONCAT(DISTINCT t.translation, ' | ')
-                FROM translations t
-                WHERE t.word_id = w.id AND t.lang_code = 'vi'
-                  AND t.translation IS NOT NULL AND t.translation != ''
-            ) AS vi_translations,
-            (
-                SELECT GROUP_CONCAT(DISTINCT d.definition, ' | ')
-                FROM word_definitions wd
-                JOIN definitions d ON d.id = wd.definition_id
-                WHERE wd.word_id = w.id
-                  AND COALESCE(d.definition_lang, 'vi') = 'vi'
-                  AND d.definition IS NOT NULL AND d.definition != ''
-            ) AS vi_definitions,
-            (
-                SELECT wd.example
-                FROM word_definitions wd
-                WHERE wd.word_id = w.id
-                  AND wd.example IS NOT NULL AND wd.example != ''
-                LIMIT 1
-            ) AS example,
-            (
-                SELECT GROUP_CONCAT(DISTINCT
-                    TRIM(COALESCE(d.pos, '') || CASE WHEN d.sub_pos IS NOT NULL THEN ' (' || d.sub_pos || ')' ELSE '' END),
-                    '; '
-                )
-                FROM word_definitions wd
-                JOIN definitions d ON d.id = wd.definition_id
-                WHERE wd.word_id = w.id
-                  AND (d.pos IS NOT NULL OR d.sub_pos IS NOT NULL)
-            ) AS pos_tags
-        FROM words w
-        WHERE w.lang_code = 'en'
-          AND w.word IS NOT NULL AND w.word != ''
-        ORDER BY w.word
-    """
+def clear_vocabulary(db_url: str) -> None:
+    engine = create_engine(db_url)
+    with engine.begin() as conn:
+        conn.execute(text("TRUNCATE learningprogress RESTART IDENTITY CASCADE"))
+        conn.execute(text("TRUNCATE vocabulary RESTART IDENTITY CASCADE"))
+    print("Cleared existing vocabulary and learning progress.")
+
+
+def row_to_entry(row: sqlite3.Row) -> dict | None:
+    meaning = row["meaning"]
+    if not meaning:
+        return None
+    return {
+        "word": row["word"].strip(),
+        "pronunciation": (row["ipa"] or "").strip() or None,
+        "meaning": meaning.strip(),
+        "description": (row["pos_tags"] or "").strip() or None,
+        "example": (row["example"] or "").strip() or None,
+    }
+
+
+def import_stream(conn: sqlite3.Connection, db_url: str, limit: int | None = None) -> tuple[int, int]:
+    engine = create_engine(db_url)
+    session = scoped_session(sessionmaker(bind=engine))
+    insert_sql = text("""
+        INSERT INTO vocabulary (word, pronunciation, meaning, description, example)
+        VALUES (:word, :pronunciation, :meaning, :description, :example)
+    """)
+
+    query = FETCH_QUERY
     if limit:
         query += f" LIMIT {int(limit)}"
 
-    rows = conn.execute(query).fetchall()
-    entries = []
-    for row in rows:
-        meaning = row["vi_translations"] or row["vi_definitions"]
-        if not meaning:
-            continue
-
-        description_parts = []
-        if row["pos_tags"]:
-            description_parts.append(row["pos_tags"])
-        if row["vi_definitions"] and row["vi_translations"]:
-            description_parts.append(row["vi_definitions"])
-
-        entries.append({
-            "word": row["word"].strip(),
-            "pronunciation": (row["ipa"] or "").strip() or None,
-            "meaning": meaning.strip(),
-            "description": " · ".join(description_parts) if description_parts else None,
-            "example": (row["example"] or "").strip() or None,
-        })
-    return entries
-
-
-def import_to_postgres(entries: list[dict], db_url: str, skip_existing: bool = True) -> tuple[int, int, int]:
-    engine = create_engine(db_url)
-    session = scoped_session(sessionmaker(bind=engine))
-
     inserted = 0
-    skipped = 0
     errors = 0
-
-    insert_sql = text("""
-        INSERT INTO Vocabulary (word, pronunciation, meaning, description, example)
-        VALUES (:word, :pronunciation, :meaning, :description, :example)
-    """)
-    exists_sql = text("SELECT 1 FROM Vocabulary WHERE LOWER(word) = LOWER(:word) LIMIT 1")
-
     batch: list[dict] = []
-    for entry in entries:
-        if skip_existing:
-            if session.execute(exists_sql, {"word": entry["word"]}).fetchone():
-                skipped += 1
-                continue
-        batch.append(entry)
+    started = time.time()
 
+    for row in conn.execute(query):
+        entry = row_to_entry(row)
+        if not entry:
+            continue
+        batch.append(entry)
         if len(batch) >= BATCH_SIZE:
             inserted, errors = _flush_batch(session, insert_sql, batch, inserted, errors)
             batch = []
+            if inserted % 10000 == 0:
+                elapsed = time.time() - started
+                print(f"  ... {inserted:,} words imported ({elapsed:.0f}s)")
 
     if batch:
         inserted, errors = _flush_batch(session, insert_sql, batch, inserted, errors)
 
     session.remove()
-    return inserted, skipped, errors
+    return inserted, errors
 
 
 def _flush_batch(session, insert_sql, batch, inserted, errors):
-    for entry in batch:
-        try:
+    try:
+        for entry in batch:
             session.execute(insert_sql, entry)
-            session.commit()
-            inserted += 1
-        except Exception as exc:
-            session.rollback()
-            errors += 1
-            print(f"Error importing '{entry['word']}': {exc}", file=sys.stderr)
+        session.commit()
+        inserted += len(batch)
+    except Exception as exc:
+        session.rollback()
+        for entry in batch:
+            try:
+                session.execute(insert_sql, entry)
+                session.commit()
+                inserted += 1
+            except Exception as row_exc:
+                session.rollback()
+                errors += 1
+                print(f"Error importing '{entry['word']}': {row_exc}", file=sys.stderr)
     return inserted, errors
 
 
@@ -160,7 +175,7 @@ def main():
     parser = argparse.ArgumentParser(description="Import EN→VI vocabulary from minhqnd dictionary.db")
     parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH, help="Path to dictionary.db")
     parser.add_argument("--limit", type=int, default=None, help="Max words to import (for testing)")
-    parser.add_argument("--allow-duplicates", action="store_true", help="Insert even if word already exists")
+    parser.add_argument("--fresh", action="store_true", help="Clear existing vocabulary before import")
     args = parser.parse_args()
 
     db_url = os.getenv("DATABASE_URL")
@@ -169,21 +184,16 @@ def main():
         sys.exit(1)
 
     print(f"Reading from {args.db}...")
+    if args.fresh:
+        clear_vocabulary(db_url)
+
     conn = get_sqlite_connection(args.db)
-    entries = fetch_english_entries(conn, limit=args.limit)
+    print("Importing into PostgreSQL (this may take several minutes)...")
+    started = time.time()
+    inserted, errors = import_stream(conn, db_url, limit=args.limit)
     conn.close()
-    print(f"Found {len(entries)} English entries with Vietnamese meanings.")
-
-    if not entries:
-        print("Nothing to import.")
-        sys.exit(0)
-
-    print("Importing into PostgreSQL...")
-    inserted, skipped, errors = import_to_postgres(
-        entries, db_url, skip_existing=not args.allow_duplicates
-    )
-
-    print(f"Done. Inserted: {inserted}, skipped (existing): {skipped}, errors: {errors}")
+    elapsed = time.time() - started
+    print(f"Done in {elapsed:.0f}s. Inserted: {inserted:,}, errors: {errors:,}")
 
 
 if __name__ == "__main__":

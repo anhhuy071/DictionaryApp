@@ -253,10 +253,43 @@ body.app-body {
 .hero-desc {
   font-size: 1.1rem;
   color: var(--text-secondary);
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   max-width: 480px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.hero-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  max-width: 560px;
+  margin: 0 auto 1.5rem;
+  padding: 0.85rem 1rem;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  color: #9a3412;
+  text-align: left;
+}
+
+.hero-notice-muted {
+  background: var(--primary-soft);
+  border-color: #c7d2fe;
+  color: var(--primary-hover);
+}
+
+.hero-notice code {
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.hero-notice i {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
 }
 
 /* ===== Search box (shared) ===== */

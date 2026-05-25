@@ -15,6 +15,7 @@ RUN mkdir -p flask_session
 
 ENV FLASK_APP=application.py
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
 EXPOSE 5000
 

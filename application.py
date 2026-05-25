@@ -157,7 +157,11 @@ def search_vocabulary(query):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    try:
+        vocabulary_count = db.execute(text("SELECT COUNT(*) FROM Vocabulary")).scalar() or 0
+    except Exception:
+        vocabulary_count = 0
+    return render_template("index.html", vocabulary_count=vocabulary_count)
 
 # LOGIN , REGISTER , LOGOUT
 

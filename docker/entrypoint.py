@@ -23,6 +23,15 @@ def wait_for_database():
 def main():
     print("Waiting for database...")
     wait_for_database()
+
+    try:
+        from seed_vocabulary import seed_if_empty
+        inserted = seed_if_empty()
+        if inserted:
+            print(f"Seeded {inserted} sample words (database was empty).")
+    except Exception as exc:
+        print(f"Seed skipped: {exc}", file=sys.stderr)
+
     print("Starting application...")
     os.execvp(
         "gunicorn",

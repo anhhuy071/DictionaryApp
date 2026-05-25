@@ -10,6 +10,18 @@
     <h1 class="hero-title">Find any word,<br><span class="hero-highlight">understand instantly.</span></h1>
     <p class="hero-desc">Search thousands of words with pronunciation, Vietnamese meanings, and examples.</p>
 
+    {% if vocabulary_count is defined and vocabulary_count == 0 %}
+    <div class="hero-notice">
+      <i class="bi bi-info-circle"></i>
+      <span>Dictionary is empty. Run <code>docker compose exec web python import_minhqnd.py</code> after placing <code>data/dictionary.db</code>, or restart to load sample words.</span>
+    </div>
+    {% elif vocabulary_count is defined and vocabulary_count < 100 %}
+    <div class="hero-notice hero-notice-muted">
+      <i class="bi bi-database"></i>
+      <span>{{ vocabulary_count }} words loaded. Import full data with <code>import_minhqnd.py</code> for more.</span>
+    </div>
+    {% endif %}
+
     <form class="hero-search" action="{{ url_for('search') }}" method="get">
       <div class="hero-search-box">
         <i class="bi bi-search hero-search-icon"></i>
