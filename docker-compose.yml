@@ -25,6 +25,7 @@ services:
       SESSION_FILE_DIR: /app/flask_session
     volumes:
       - flask_sessions:/app/flask_session
+      - ./data:/app/data:ro
     depends_on:
       db:
         condition: service_healthy

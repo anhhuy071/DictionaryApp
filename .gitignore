@@ -2,3 +2,6 @@ myenv
 .vscode
 .env
 flask_session
+data/*.db
+dictionary.db
+dataapp.csv
