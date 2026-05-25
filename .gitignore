@@ -1,7 +1,13 @@
-myenv
-.vscode
+myenv/
+.vscode/
+.cursor/
 .env
-flask_session
+.env.local
+flask_session/
+__pycache__/
+*.py[cod]
+.pytest_cache/
 data/*.db
 dictionary.db
 dataapp.csv
+*.log

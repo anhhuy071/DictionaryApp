@@ -1,21 +1,22 @@
+import logging
+import os
 import random
-from random import shuffle
-import os , re , logging
+import re
+from datetime import datetime
 from functools import wraps
+from random import shuffle
+
+from dotenv import load_dotenv
+from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
+from flask_paginate import Pagination, get_page_parameter
+from flask_session import Session
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import scoped_session, sessionmaker
-from flask import Flask, jsonify, session, render_template, redirect, request, url_for, flash
-from flask_session import Session
-from flask_paginate import Pagination, get_page_parameter
-from dotenv import load_dotenv
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
-import random
-from datetime import datetime
+from werkzeug.security import check_password_hash, generate_password_hash
 
 load_dotenv()
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
 app = Flask(__name__)
 
