@@ -1,45 +1,31 @@
 {% extends "layout.html" %}
 
-{% block title %} Login {% endblock %}
-
-{% block nav %}
-  
-{% endblock nav %}
+{% block title %}Log in{% endblock %}
 
 {% block content %}
-
-<div class="container-fluid">
-    <div class="row ">
-        <div class="col-6 p-0">
-            <div class="">
-                <div class="bg-illustration">
-                </div>
-            </div>
-        </div>
-        <div class="col-6 d-flex justify-content-center align-items-center">
-                <form action="/login" method="post" class="login-form form">
-                    <p class="title-card">Login<p>
-                    <div>
-                        <span>Username</span>
-                        <input name="username" class="form-control" placeholder="username" type="text" required>
-                    </div> 
-                    <div>
-                        <span>Email</span>
-                        <input name="email" class="form-control" placeholder="Email" type="email" required>
-                    </div> 
-                    <div>
-                        <span>Password</span>
-                        <input name="password" class="form-control" placeholder="******" type="password" required>
-                    </div> 
-                    <div>
-                    </div> 
-                    <div>
-                        <button type="submit" class="btn submit"> Log in  </button>
-                    </div> 
-                    <p class="text-center"><a href="{{url_for("register")}}" >Do not have an account ?</a></p>
-                </form>
-        </div>
+<section class="auth-page">
+  <div class="auth-card">
+    <div class="auth-card-header">
+      <span class="app-brand-icon auth-logo"><i class="bi bi-book-half"></i></span>
+      <h1>Welcome back</h1>
+      <p>Log in to save words and track your progress.</p>
     </div>
-</div>
-
+    <form action="/login" method="post" class="auth-form">
+      <label class="auth-field">
+        <span>Username</span>
+        <input name="username" class="form-control" placeholder="Your username" type="text" required>
+      </label>
+      <label class="auth-field">
+        <span>Email</span>
+        <input name="email" class="form-control" placeholder="you@email.com" type="email" required>
+      </label>
+      <label class="auth-field">
+        <span>Password</span>
+        <input name="password" class="form-control" placeholder="••••••••" type="password" required>
+      </label>
+      <button type="submit" class="btn app-btn-primary auth-submit">Log in</button>
+      <p class="auth-switch">Don't have an account? <a href="{{ url_for('register') }}">Sign up</a></p>
+    </form>
+  </div>
+</section>
 {% endblock %}

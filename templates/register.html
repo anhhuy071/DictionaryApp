@@ -1,50 +1,42 @@
-{% extends 'layout.html' %}
+{% extends "layout.html" %}
 
-{% block title %}
-  Register
-{% endblock %}
+{% block title %}Sign up{% endblock %}
 
 {% block content %}
-  <div class="container">
-    <div class="row">
-      <div class="col-4"></div>
-      <div class="md-col-4">
-        <form action="/register" method="post" class="register-form form">
-          <p class="title-card">Sign up</p>
-          <p class="message">Sign up now and get full access to our app.</p>
-          <label>
-            <span>Username</span>
-            <input class="form-control" name="username" type="text" placeholder="" required="" />
-          </label>
-          
-          <label>
-            <span>Full Name</span>
-            <input class="form-control" name="full_name" type="text" placeholder="" required="" />
-          </label>
-
-      
-          <label>
-            <span>Email</span>
-            <input class="form-control" name="email" type="email" placeholder="email@" required="" />
-          </label>
-
-          <label>
-            <span>Password</span>
-            <input class="form-control" name="password1" type="password" placeholder="********" required="" />
-          </label>
-          <label>
-            <span>Confirm password</span>
-            <input class="form-control" name="password2" type="password" placeholder="********" required="" />
-          </label>
-          <button class="submit" type="submit">Submit</button>
-          <p class="signin"> Already have an account?<a href="{{ url_for('login') }}">Log in</a></p>
-        </form>
-      </div>
-      <div class="col-4"></div>
-
-      <div class="col-6">
-        <!-- image -->
-      </div>
+<section class="auth-page">
+  <div class="auth-card">
+    <div class="auth-card-header">
+      <span class="app-brand-icon auth-logo"><i class="bi bi-book-half"></i></span>
+      <h1>Create account</h1>
+      <p>Sign up to build vocabulary lists and study with flashcards.</p>
     </div>
+    <form action="/register" method="post" class="auth-form">
+      {% if message %}
+      <div class="auth-alert">{{ message }}</div>
+      {% endif %}
+      <label class="auth-field">
+        <span>Username</span>
+        <input class="form-control" name="username" type="text" required>
+      </label>
+      <label class="auth-field">
+        <span>Full name</span>
+        <input class="form-control" name="full_name" type="text" required>
+      </label>
+      <label class="auth-field">
+        <span>Email</span>
+        <input class="form-control" name="email" type="email" placeholder="you@email.com" required>
+      </label>
+      <label class="auth-field">
+        <span>Password</span>
+        <input class="form-control" name="password1" type="password" placeholder="••••••••" required>
+      </label>
+      <label class="auth-field">
+        <span>Confirm password</span>
+        <input class="form-control" name="password2" type="password" placeholder="••••••••" required>
+      </label>
+      <button class="btn app-btn-primary auth-submit" type="submit">Create account</button>
+      <p class="auth-switch">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+    </form>
   </div>
+</section>
 {% endblock %}

@@ -1,0 +1,13 @@
+myenv/
+.env
+.git/
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.vscode/
+.cursor/
+flask_session/
+*.md
+.gitattributes

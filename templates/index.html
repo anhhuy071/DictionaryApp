@@ -1,18 +1,52 @@
-{% extends "layout.html" %} 
+{% extends "layout.html" %}
 
-{% block title %} Home Page {% endblock %} 
+{% block title %}Home{% endblock %}
 
 {% block content %}
-    <div class="container">
-        <div class="row">
-            <div class="col align-self-center my-5 color-white">
-                <h2>Welcome to the Vocabulary App</h2>
-                <p>Use the search function to find vocabulary words.</p>
-                {% if not session.logged_in %}
-                  <a class="btn btn-lg btn-primary" href="{{url_for("login")}}" role="button">Login</a>
-                {% endif %}
-            </div>
-        </div>
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="container hero-inner">
+    <div class="hero-badge"><i class="bi bi-translate"></i> English → Vietnamese</div>
+    <h1 class="hero-title">Find any word,<br><span class="hero-highlight">understand instantly.</span></h1>
+    <p class="hero-desc">Search thousands of words with pronunciation, Vietnamese meanings, and examples.</p>
+
+    <form class="hero-search" action="{{ url_for('search') }}" method="get">
+      <div class="hero-search-box">
+        <i class="bi bi-search hero-search-icon"></i>
+        <input name="q" class="hero-search-input" placeholder="Type an English word…" type="search" required autofocus>
+        <button type="submit" class="hero-search-btn">Search</button>
+      </div>
+    </form>
+
+    <div class="hero-actions">
+      <a href="{{ url_for('page') }}" class="hero-chip">
+        <i class="bi bi-grid"></i> Browse all words
+      </a>
+      {% if session.logged_in %}
+      <a href="{{ url_for('VocabularyPage') }}" class="hero-chip hero-chip-accent">
+        <i class="bi bi-journal-bookmark"></i> My vocabulary lists
+      </a>
+      {% else %}
+      <a href="{{ url_for('login') }}" class="hero-chip hero-chip-accent">
+        <i class="bi bi-bookmark-plus"></i> Save words to lists
+      </a>
+      {% endif %}
     </div>
 
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <i class="bi bi-lightning-charge"></i>
+        <span>Instant lookup</span>
+      </div>
+      <div class="hero-stat">
+        <i class="bi bi-volume-up"></i>
+        <span>Pronunciation</span>
+      </div>
+      <div class="hero-stat">
+        <i class="bi bi-mortarboard"></i>
+        <span>Flashcards & quizzes</span>
+      </div>
+    </div>
+  </div>
+</section>
 {% endblock %}

@@ -1,32 +1,5 @@
-.search-form {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 20px; /* Điều chỉnh khoảng cách từ trên xuống */
-}
+/* Search page uses shared hero-search styles from dictionary.css */
 
-.search-form h2 {
-    margin-bottom: 20px; /* Khoảng cách giữa tiêu đề và ô tìm kiếm */
-    font-size: 24px;
-    color: #333; /* Màu chữ tùy chọn */
-}
-
-.search-form .form-group {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.search-form .form-control {
-    width: 300px; /* Chiều rộng của ô tìm kiếm */
-    margin-right: 10px; /* Khoảng cách giữa ô tìm kiếm và nút */
-}
-
-.search-form .btn {
-    background-color: #007bff; /* Màu nền của nút */
-    color: #fff; /* Màu chữ của nút */
-}
-
-.search-form .btn:hover {
-    background-color: #0056b3; /* Màu nền của nút khi hover */
+.page-shell .hero-search {
+  margin-bottom: 0;
 }

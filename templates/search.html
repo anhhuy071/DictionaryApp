@@ -3,20 +3,18 @@
 {% block title %}Search{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="search-form">
-                <form class="form-inline justify-content-center" action="{{url_for('search')}}" method="post">
-                    <h2>Search for word</h2>
-                    <div class="form-group">
-                        <input name="input-search" class="form-control" placeholder="find" type="search" required>
-                        <button type="submit" class="btn">Search</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+<section class="page-shell page-shell-narrow">
+  <div class="page-header">
+    <h1 class="page-title">Search dictionary</h1>
+    <p class="page-subtitle">English → Vietnamese</p>
+  </div>
+
+  <form class="hero-search" action="{{ url_for('search') }}" method="get">
+    <div class="hero-search-box">
+      <i class="bi bi-search hero-search-icon"></i>
+      <input name="q" class="hero-search-input" placeholder="Type an English word…" type="search" value="{{ q or '' }}" required autofocus>
+      <button type="submit" class="hero-search-btn">Search</button>
     </div>
-</div>
+  </form>
+</section>
 {% endblock %}
-                

@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ word.word }}{% endblock %}
+
+{% block content %}
+<section class="page-shell page-shell-narrow">
+  <a href="{% if from_q %}{{ url_for('search', q=from_q) }}{% else %}{{ url_for('search') }}{% endif %}" class="back-link">
+    <i class="bi bi-arrow-left"></i> Back
+  </a>
+
+  <article class="word-card">
+    <header class="word-card-header">
+      <div class="word-card-headline">
+        <h1 class="word-card-title">{{ word.word }}</h1>
+        {% if word.pronunciation %}
+        <p class="word-card-ipa"><i class="bi bi-volume-up"></i> {{ word.pronunciation }}</p>
+        {% endif %}
+      </div>
+      <span class="word-card-lang">EN → VI</span>
+    </header>
+
+    <div class="word-card-body">
+      <section class="word-block word-block-primary">
+        <h2 class="word-block-label"><i class="bi bi-chat-left-text"></i> Meaning</h2>
+        <p class="word-block-content word-block-meaning">{{ word.meaning }}</p>
+      </section>
+
+      {% if word.description %}
+      <section class="word-block">
+        <h2 class="word-block-label"><i class="bi bi-info-circle"></i> Description</h2>
+        <p class="word-block-content">{{ word.description }}</p>
+      </section>
+      {% endif %}
+
+      {% if word.example %}
+      <section class="word-block word-block-example">
+        <h2 class="word-block-label"><i class="bi bi-quote"></i> Example</h2>
+        <blockquote class="word-block-content">{{ word.example }}</blockquote>
+      </section>
+      {% endif %}
+    </div>
+
+    <footer class="word-card-footer">
+      {% if session.logged_in %}
+      <a href="{{ url_for('saved_words') }}" class="btn app-btn-primary">
+        <i class="bi bi-bookmark-plus"></i> Add to list
+      </a>
+      {% else %}
+      <a href="{{ url_for('login') }}" class="btn app-btn-primary">
+        <i class="bi bi-box-arrow-in-right"></i> Log in to save
+      </a>
+      {% endif %}
+    </footer>
+  </article>
+</section>
+{% endblock %}

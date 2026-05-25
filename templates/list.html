@@ -1,44 +1,64 @@
-{% extends "layout.html" %} 
+{% extends "layout.html" %}
 
-{% block title %}List{% endblock %} 
+{% block title %}{% if search_query %}Results{% else %}Browse{% endif %}{% endblock %}
 
 {% block content %}
-<div class="container custom-list-container">
-  <div class="row custom-list-row">
-    <div class="col-md-6 mt-5 custom-list-col">
-      {% if result %}
-      <table class="table custom-list-table">
-        <thead>
-          <tr>
-            <th scope="col">Word</th>
-            <th scope="col">Pronunciation</th>
-            <th scope="col">Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in result %}
-          <tr>
-            <td>{{ item.word }}</td>
-            <td>{{ item.pronunciation }}</td>
-            <td>{{ item.meaning }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<section class="page-shell">
+  <div class="page-header page-header-row">
+    <div>
+      {% if search_query %}
+      <h1 class="page-title">Results for <em>"{{ search_query }}"</em></h1>
+      <p class="page-subtitle">{{ result|length if result else 0 }} word{{ 's' if (result|length != 1) else '' }} found</p>
       {% else %}
-      <p class="custom-list-no-result">No result is found</p>
+      <h1 class="page-title">Browse vocabulary</h1>
+      <p class="page-subtitle">All words in the dictionary</p>
       {% endif %}
-      {% if pagination %}
-      <div class="row custom-list-pagination-row">
-        <div class="col custom-list-pagination-col">{{ pagination.links }}</div>
+    </div>
+    {% if search_query %}
+    <form action="{{ url_for('search') }}" method="get" class="results-inline-search d-none d-md-block">
+      <div class="hero-search-box hero-search-box-sm">
+        <i class="bi bi-search hero-search-icon"></i>
+        <input name="q" class="hero-search-input" type="search" value="{{ search_query }}" required>
+        <button type="submit" class="hero-search-btn">Search</button>
       </div>
-      {% endif %}
-    </div>
+    </form>
+    {% endif %}
   </div>
-  <div class="row">
-    <div class="col text-right">
-      <a href="{{ url_for('index') }}" class="btn btn-primary mb-3 float-right">Back to Pages</a>
-    </div>
+
+  {% if result %}
+  <div class="results-grid">
+    {% for item in result %}
+    <a href="{{ url_for('word_detail', word_id=item.word_id, from_q=search_query or '') }}" class="result-card">
+      <div class="result-card-top">
+        <span class="result-card-word">{{ item.word }}</span>
+        {% if item.pronunciation %}
+        <span class="result-card-ipa">{{ item.pronunciation }}</span>
+        {% endif %}
+      </div>
+      <p class="result-card-meaning">{{ item.meaning }}</p>
+      <span class="result-card-arrow"><i class="bi bi-arrow-right"></i></span>
+    </a>
+    {% endfor %}
   </div>
-</div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon"><i class="bi bi-search"></i></div>
+    <h2>No words found</h2>
+    {% if search_query %}
+    <p>We couldn't find anything matching "{{ search_query }}". Try a different spelling.</p>
+    {% else %}
+    <p>The dictionary is empty. Import vocabulary to get started.</p>
+    {% endif %}
+    <a href="{{ url_for('search') }}" class="btn app-btn-primary">Search again</a>
+  </div>
+  {% endif %}
+
+  {% if pagination %}
+  <div class="results-pagination">{{ pagination.links }}</div>
+  {% endif %}
+
+  <div class="page-footer-actions">
+    <a href="{{ url_for('index') }}" class="back-link"><i class="bi bi-house"></i> Back to home</a>
+  </div>
+</section>
 {% endblock %}

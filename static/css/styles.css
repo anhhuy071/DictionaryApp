@@ -14,8 +14,9 @@ body {
 } */
 
 body {
-  font-size: 1.6rem;
-  font-family: "Poppins", sans-serif;
+  font-size: 1rem;
+  font-family: "Plus Jakarta Sans", "Poppins", sans-serif;
+  line-height: 1.6;
 }
 
 a {
@@ -29,8 +30,10 @@ a {
   --hover-text: #e50087;
   position: relative;
   max-width: 450px;
-  height: 900px;
-  max-height: 900px;
+  width: 100%;
+  min-height: 280px;
+  max-height: 80vh;
+  height: auto;
   text-align: center;
   background: var(--bg);
   padding: 1.5em;
@@ -268,7 +271,7 @@ table.table.\.list {
 } */
 
 .search-form {
-  margin-top: 50%;
+  margin-top: 2rem;
 }
 
 #details {

@@ -22,8 +22,13 @@ app = Flask(__name__)
 if not os.getenv("DATABASE_URL"):
     raise RuntimeError("DATABASE_URL is not set")
 
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_FILE_DIR"] = os.getenv(
+    "SESSION_FILE_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "flask_session"),
+)
 Session(app)
 
 engine = create_engine(os.getenv("DATABASE_URL"))
@@ -117,18 +122,35 @@ def get_word_count_from_db(user_id, page_id):
 
 def update_score_in_db(user_id, page_id, word_id, score):
     try:
-        query = text('''
-            UPDATE LearningProgress 
-            SET score = score + :score 
-            WHERE page_id = :page_id AND user_id = :user_id AND word_id = :word_id
-        ''')
-        params = {"page_id": page_id, "user_id": user_id, "score": score, "word_id": word_id}
-        
-        with engine.connect() as db:
-            db.execute(query, params)
-            
+        db.execute(
+            text('''
+                UPDATE LearningProgress
+                SET score = score + :score
+                WHERE user_id = :user_id AND page_id = :page_id AND word_id = :word_id
+            '''),
+            {"user_id": user_id, "page_id": page_id, "word_id": word_id, "score": score}
+        )
+        db.commit()
     except Exception as e:
         logging.error(f"Error updating score: {e}")
+
+
+def search_vocabulary(query):
+    q = query.strip().lower()
+    if not q:
+        return []
+    sql = text('''
+        SELECT * FROM Vocabulary
+        WHERE LOWER(word) LIKE :contains
+        ORDER BY
+            CASE
+                WHEN LOWER(word) = :exact THEN 0
+                WHEN LOWER(word) LIKE :prefix THEN 1
+                ELSE 2
+            END,
+            word ASC
+    ''')
+    return db.execute(sql, {"exact": q, "prefix": q + "%", "contains": "%" + q + "%"}).fetchall()
 
 # ROUTES
 
@@ -242,21 +264,42 @@ def page():
 
 @app.route('/search', methods=['GET', 'POST'], endpoint='search')
 def search():
-    if request.method == "GET":
-        return render_template("search.html")
-    else:
-        query = request.form.get("input-search")
-        if query is None:
-            return render_template("error.html", message="Search field cannot be empty!")
-        try:
-            result = db.execute(text('SELECT * FROM Vocabulary WHERE LOWER(word) LIKE :query'), {"query": "%" + query.lower() + "%"}).fetchall()
-        except Exception as e:
-            return render_template("error.html", message=str(e))
-        if not result:
-            return render_template("error.html", message="Your query did not match any documents")
-        return render_template("list.html", result=result)
+    if request.method == "GET" and not request.args.get("q"):
+        return render_template("search.html", q="")
 
-@app.route('/saved_words', methods=['GET', 'POST'], endpoint='search_saved_words_list')
+    query = request.form.get("input-search") or request.form.get("q") or request.args.get("q")
+    if not query or not query.strip():
+        return render_template("search.html", q=query or "")
+
+    query = query.strip()
+    try:
+        result = search_vocabulary(query)
+    except Exception as e:
+        return render_template("error.html", message=str(e))
+
+    if len(result) == 1 and result[0].word.lower() == query.lower():
+        return redirect(url_for('word_detail', word_id=result[0].word_id, from_q=query))
+
+    return render_template("list.html", result=result, search_query=query)
+
+
+@app.route('/word/<int:word_id>')
+def word_detail(word_id):
+    try:
+        word = db.execute(
+            text('SELECT * FROM Vocabulary WHERE word_id = :word_id'),
+            {"word_id": word_id}
+        ).fetchone()
+    except Exception as e:
+        return render_template("error.html", message=str(e))
+
+    if not word:
+        return render_template("error.html", message="Word not found"), 404
+
+    from_q = request.args.get('from_q', '')
+    return render_template('word_detail.html', word=word, from_q=from_q)
+
+@app.route('/saved_words', methods=['GET', 'POST'], endpoint='saved_words')
 def search_saved_words():
     if request.method == "GET":
         return render_template("saved_words.html")
@@ -377,11 +420,6 @@ def save_words_to_existing_page():
 
     except Exception as e:
         logging.exception("Error while saving word")
-
-@app.route('/saved_words', methods=['GET', 'POST'])
-@login_required
-def saved_words():
-    pass
 
 #xóa từ
 @app.route('/delete_words/<int:page_id>', methods=['GET'])
@@ -668,20 +706,6 @@ def fill_in_the_blanks():
     correct_word = question.word
 
     return render_template('fill_in_the_blanks.html', meaning=meaning, correct_word=correct_word, question_number=question_number, word_id=question.word_id)
-
-def update_score_in_db(user_id, page_id, word_id, score):
-    try:
-        db.execute(
-            text('''
-                UPDATE LearningProgress
-                SET score = score + :score
-                WHERE user_id = :user_id AND page_id = :page_id AND word_id = :word_id
-            '''), 
-            {"user_id": user_id, "page_id": page_id, "word_id": word_id, "score": score}
-        )
-        db.commit()
-    except Exception as e:
-        print(f"Error updating score: {e}")
 
 def quiz_route(question_col, answer_col):
     question_number = session.setdefault('question_number', 0)
